@@ -7,6 +7,9 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, Award, BarChart3, Download, FileText, TrendingUp, Calculator, Target, DollarSign, Shield, Lightbulb, Users, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 import type { Commodity, CriteriaWeights as CriteriaWeightsType, CalculationResult } from './SPKDashboard';
 
 interface ResultsProps {
@@ -22,12 +25,252 @@ export function Results({ commodities, weights, results, budget, onCalculate, is
   const { toast } = useToast();
   const [exportFormat, setExportFormat] = useState<'pdf' | 'excel'>('pdf');
 
-  const handleExport = (format: 'pdf' | 'excel') => {
-    // Simulate export functionality
-    toast({
-      title: "Export Berhasil",
-      description: `Hasil SPK berhasil diekspor ke format ${format.toUpperCase()}`,
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    if (!results) return;
+
+    try {
+      if (format === 'pdf') {
+        await exportToPDF();
+      } else {
+        exportToExcel();
+      }
+      
+      toast({
+        title: "Export Berhasil",
+        description: `Hasil SPK berhasil diekspor ke format ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Gagal",
+        description: "Terjadi kesalahan saat mengekspor data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const exportToPDF = async () => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 20;
+    let yPosition = margin;
+
+    // Helper function to add text with automatic line wrapping
+    const addText = (text: string, x: number, y: number, maxWidth?: number) => {
+      if (maxWidth) {
+        const lines = pdf.splitTextToSize(text, maxWidth);
+        pdf.text(lines, x, y);
+        return y + (lines.length * 6);
+      } else {
+        pdf.text(text, x, y);
+        return y + 6;
+      }
+    };
+
+    // Title
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    yPosition = addText('LAPORAN HASIL ANALISIS SPK', margin, yPosition);
+    yPosition = addText('Sistem Pendukung Keputusan Komoditas Pertanian', margin, yPosition + 5);
+    
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    yPosition = addText(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, margin, yPosition + 10);
+    
+    // Budget info
+    if (budget > 0) {
+      yPosition = addText(`Anggaran Tersedia: Rp ${budget.toLocaleString('id-ID')}`, margin, yPosition + 5);
+    }
+
+    yPosition += 15;
+
+    // Recommendation
+    const recommendation = getRecommendation();
+    if (recommendation) {
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, 'bold');
+      yPosition = addText('REKOMENDASI SISTEM', margin, yPosition);
+      
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, 'normal');
+      yPosition = addText(recommendation.message, margin, yPosition + 5, pageWidth - 2 * margin);
+      yPosition += 10;
+    }
+
+    // Results Table
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    yPosition = addText('HASIL PERINGKAT KOMODITAS', margin, yPosition);
+    
+    pdf.setFontSize(9);
+    pdf.setFont(undefined, 'normal');
+    
+    // Table headers
+    const headers = ['Peringkat', 'Komoditas', 'Skor SAW', 'Skor TOPSIS', 'Rata-rata'];
+    const columnWidths = [25, 60, 30, 30, 30];
+    let xPos = margin;
+    
+    yPosition += 10;
+    pdf.setFont(undefined, 'bold');
+    headers.forEach((header, i) => {
+      pdf.text(header, xPos, yPosition);
+      xPos += columnWidths[i];
     });
+    
+    pdf.line(margin, yPosition + 2, pageWidth - margin, yPosition + 2);
+    yPosition += 8;
+    
+    // Table data
+    pdf.setFont(undefined, 'normal');
+    commodities.forEach((commodity) => {
+      const sawResult = results.saw.alternatives.find(a => a.id === commodity.id);
+      const topsisResult = results.topsis.alternatives.find(a => a.id === commodity.id);
+      const avgScore = sawResult && topsisResult ? (sawResult.score + topsisResult.score) / 2 : 0;
+      
+      if (yPosition > 270) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+      
+      xPos = margin;
+      const data = [
+        `#${sawResult?.rank || '-'}`,
+        commodity.name,
+        sawResult?.score.toFixed(2) || '-',
+        topsisResult?.score.toFixed(2) || '-',
+        avgScore.toFixed(2)
+      ];
+      
+      data.forEach((cell, i) => {
+        pdf.text(cell, xPos, yPosition);
+        xPos += columnWidths[i];
+      });
+      yPosition += 6;
+    });
+
+    // Budget Allocation
+    yPosition += 15;
+    if (yPosition > 250) {
+      pdf.addPage();
+      yPosition = margin;
+    }
+    
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    yPosition = addText('REKOMENDASI ALOKASI ANGGARAN', margin, yPosition);
+    
+    pdf.setFontSize(9);
+    pdf.setFont(undefined, 'normal');
+    yPosition += 5;
+    
+    const budgetAllocation = calculateBudgetAllocation();
+    budgetAllocation.forEach((item, index) => {
+      yPosition = addText(
+        `${index + 1}. ${item.name}: ${item.percentage.toFixed(1)}% (Rp ${item.allocation.toLocaleString('id-ID')})`,
+        margin,
+        yPosition + 5,
+        pageWidth - 2 * margin
+      );
+    });
+
+    // Food Security Index
+    yPosition += 15;
+    const foodSecurity = calculateFoodSecurityIndex();
+    
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    yPosition = addText('INDIKATOR KETAHANAN PANGAN', margin, yPosition);
+    
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    yPosition = addText(`Skor: ${foodSecurity.score}/100 (${foodSecurity.category})`, margin, yPosition + 5);
+
+    // Save PDF
+    pdf.save(`Laporan_SPK_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
+  const exportToExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    
+    // Sheet 1: Summary
+    const summaryData = [
+      ['LAPORAN HASIL ANALISIS SPK'],
+      ['Sistem Pendukung Keputusan Komoditas Pertanian'],
+      [''],
+      [`Tanggal: ${new Date().toLocaleDateString('id-ID')}`],
+      ...(budget > 0 ? [[`Anggaran: Rp ${budget.toLocaleString('id-ID')}`]] : []),
+      [''],
+      ['REKOMENDASI SISTEM'],
+      [getRecommendation()?.message || ''],
+      ['']
+    ];
+    
+    const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(workbook, summaryWS, 'Ringkasan');
+    
+    // Sheet 2: Detailed Results
+    const resultsData = [
+      ['Peringkat', 'Komoditas', 'Skor SAW', 'Peringkat SAW', 'Skor TOPSIS', 'Peringkat TOPSIS', 'Rata-rata Skor']
+    ];
+    
+    commodities.forEach((commodity) => {
+      const sawResult = results!.saw.alternatives.find(a => a.id === commodity.id);
+      const topsisResult = results!.topsis.alternatives.find(a => a.id === commodity.id);
+      const avgScore = sawResult && topsisResult ? (sawResult.score + topsisResult.score) / 2 : 0;
+      
+      resultsData.push([
+        sawResult?.rank?.toString() || '',
+        commodity.name,
+        sawResult?.score.toFixed(2) || '',
+        sawResult?.rank?.toString() || '',
+        topsisResult?.score.toFixed(2) || '',
+        topsisResult?.rank?.toString() || '',
+        avgScore.toFixed(2)
+      ]);
+    });
+    
+    const resultsWS = XLSX.utils.aoa_to_sheet(resultsData);
+    XLSX.utils.book_append_sheet(workbook, resultsWS, 'Hasil Detail');
+    
+    // Sheet 3: Budget Allocation
+    const budgetData = [
+      ['REKOMENDASI ALOKASI ANGGARAN'],
+      [''],
+      ['Peringkat', 'Komoditas', 'Persentase (%)', 'Alokasi (Rp)', 'Prioritas']
+    ];
+    
+    const budgetAllocation = calculateBudgetAllocation();
+    budgetAllocation.forEach((item, index) => {
+      budgetData.push([
+        (index + 1).toString(),
+        item.name,
+        item.percentage.toFixed(1),
+        item.allocation.toLocaleString('id-ID'),
+        item.priority
+      ]);
+    });
+    
+    const budgetWS = XLSX.utils.aoa_to_sheet(budgetData);
+    XLSX.utils.book_append_sheet(workbook, budgetWS, 'Alokasi Anggaran');
+    
+    // Sheet 4: Food Security
+    const foodSecurity = calculateFoodSecurityIndex();
+    const foodSecurityData = [
+      ['INDIKATOR KETAHANAN PANGAN'],
+      [''],
+      ['Indikator', 'Nilai'],
+      ['Skor Total', foodSecurity.score],
+      ['Kategori', foodSecurity.category],
+      ['Diversitas', foodSecurity.details.diversity],
+      ['Faktor Pasar', foodSecurity.details.market],
+      ['Produktivitas', foodSecurity.details.productivity],
+      ['Skor SPK', foodSecurity.details.spkScore]
+    ];
+    
+    const foodSecurityWS = XLSX.utils.aoa_to_sheet(foodSecurityData);
+    XLSX.utils.book_append_sheet(workbook, foodSecurityWS, 'Ketahanan Pangan');
+    
+    // Save Excel file
+    XLSX.writeFile(workbook, `Laporan_SPK_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const getRankBadgeVariant = (rank: number) => {
