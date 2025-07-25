@@ -181,9 +181,12 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nama Komoditas *</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Jenis tanaman atau komoditas pertanian yang akan dianalisis
+                </p>
                 <Input
                   id="name"
                   value={formData.name}
@@ -195,6 +198,9 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
 
               <div className="space-y-2">
                 <Label htmlFor="landArea">Luas Lahan (Ha) *</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Seberapa besar area yang dapat digunakan untuk tiap komoditas (dalam hektar)
+                </p>
                 <Input
                   id="landArea"
                   type="number"
@@ -209,6 +215,9 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
 
               <div className="space-y-2">
                 <Label htmlFor="productivity">Produktivitas (Ton/Ha) *</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Rata-rata hasil panen dari komoditas tersebut per hektar
+                </p>
                 <Input
                   id="productivity"
                   type="number"
@@ -223,6 +232,9 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
 
               <div className="space-y-2">
                 <Label htmlFor="sellingPrice">Harga Jual (Rp/Kg)</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Harga pasar rata-rata di tingkat petani/lokal per kilogram
+                </p>
                 <Input
                   id="sellingPrice"
                   type="number"
@@ -235,6 +247,9 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
 
               <div className="space-y-2">
                 <Label htmlFor="productionCost">Biaya Produksi (Rp/Ha)</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Estimasi pengeluaran untuk memproduksi tiap komoditas per hektar (pupuk, bibit, pestisida, dll.)
+                </p>
                 <Input
                   id="productionCost"
                   type="number"
@@ -247,6 +262,9 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
 
               <div className="space-y-2">
                 <Label htmlFor="laborAvailability">Ketersediaan Tenaga Kerja (Orang)</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Petani atau kelompok tani yang bisa menjalankan komoditas tersebut
+                </p>
                 <Input
                   id="laborAvailability"
                   type="number"
@@ -259,6 +277,9 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
 
               <div className="space-y-2">
                 <Label htmlFor="marketDemand">Kebutuhan Pasar Lokal (%)</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Tingkat permintaan atau kebutuhan warga terhadap komoditas tersebut (0-100%)
+                </p>
                 <Input
                   id="marketDemand"
                   type="number"
@@ -272,6 +293,11 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
 
               <div className="space-y-2">
                 <Label htmlFor="derivativesPotential">Potensi Produk Turunan (1-5)</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Apakah komoditas ini bisa diolah menjadi makanan/barang lain? (1=rendah, 5=tinggi)
+                  <br />
+                  <span className="text-muted-foreground/80">Contoh: keripik, tepung, dodol, sirup, dll.</span>
+                </p>
                 <Input
                   id="derivativesPotential"
                   type="number"
@@ -284,18 +310,18 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button type="submit" className="bg-gradient-primary">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button type="submit" className="bg-gradient-primary w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 {editingId ? 'Update Komoditas' : 'Tambah Komoditas'}
               </Button>
               {editingId && (
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} className="w-full sm:w-auto">
                   Batal
                 </Button>
               )}
               {commodities.length === 0 && (
-                <Button type="button" variant="secondary" onClick={loadSampleData}>
+                <Button type="button" variant="secondary" onClick={loadSampleData} className="w-full sm:w-auto">
                   Muat Data Contoh
                 </Button>
               )}
@@ -340,24 +366,28 @@ export function CommodityInput({ commodities, onCommoditiesChange, budget, onBud
                       <TableCell>{commodity.laborAvailability}</TableCell>
                       <TableCell>{commodity.marketDemand}%</TableCell>
                       <TableCell>{commodity.derivativesPotential}/5</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(commodity)}
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDelete(commodity.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex flex-col sm:flex-row gap-1">
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => handleEdit(commodity)}
+                             className="w-full sm:w-auto"
+                           >
+                             <Edit className="w-3 h-3 sm:mr-0" />
+                             <span className="ml-1 sm:hidden">Edit</span>
+                           </Button>
+                           <Button
+                             size="sm"
+                             variant="destructive"
+                             onClick={() => handleDelete(commodity.id)}
+                             className="w-full sm:w-auto"
+                           >
+                             <Trash2 className="w-3 h-3 sm:mr-0" />
+                             <span className="ml-1 sm:hidden">Hapus</span>
+                           </Button>
+                         </div>
+                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

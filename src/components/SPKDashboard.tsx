@@ -113,33 +113,36 @@ export function SPKDashboard() {
     <div className="min-h-screen bg-gradient-subtle">
       {/* Header */}
       <header className="bg-gradient-primary shadow-soft border-b">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary-glow rounded-lg flex items-center justify-center">
-              <Wheat className="w-6 h-6 text-primary-foreground" />
+        <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary-glow rounded-lg flex items-center justify-center flex-shrink-0">
+              <Wheat className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-primary-foreground">
-                SPK Alokasi Sumber Daya Pertanian
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-primary-foreground truncate">
+                Desa Mandiri Pangan
               </h1>
-              <p className="text-primary-foreground/80 mt-1">
-                Sistem Pendukung Keputusan dengan Metode SAW dan TOPSIS
+              <p className="text-primary-foreground/80 mt-1 text-sm sm:text-base">
+                <span className="hidden sm:inline">Sistem Pendukung Keputusan Alokasi Sumber Daya Pertanian dalam Rangka Penguatan Ketahanan Pangan Desa</span>
+                <span className="sm:hidden">SPK Ketahanan Pangan Desa</span>
               </p>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-8">
         <Tabs defaultValue="input" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="input" className="flex items-center gap-2">
+            <TabsTrigger value="input" className="flex items-center gap-2 text-xs sm:text-sm">
               <Calculator className="w-4 h-4" />
-              Input Data & Bobot Kriteria
+              <span className="hidden sm:inline">Input Data & Bobot Kriteria</span>
+              <span className="sm:hidden">Input Data</span>
             </TabsTrigger>
-            <TabsTrigger value="results" className="flex items-center gap-2">
+            <TabsTrigger value="results" className="flex items-center gap-2 text-xs sm:text-sm">
               <Download className="w-4 h-4" />
-              Hasil & Rekomendasi
+              <span className="hidden sm:inline">Hasil & Rekomendasi</span>
+              <span className="sm:hidden">Hasil</span>
             </TabsTrigger>
           </TabsList>
 
@@ -196,11 +199,11 @@ export function SPKDashboard() {
         </Tabs>
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4 mt-8">
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
           <Button
             onClick={handleCalculate}
             disabled={isCalculating || commodities.length < 2}
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+            className="bg-gradient-primary hover:shadow-glow transition-all duration-300 w-full sm:w-auto"
             size="lg"
           >
             {isCalculating ? (
@@ -214,12 +217,12 @@ export function SPKDashboard() {
                 Hitung SPK
               </>
             )}
-          </Button>
-          
+          </Button>          
           <Button
             onClick={handleReset}
             variant="outline"
             size="lg"
+            className="w-full sm:w-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Reset Data

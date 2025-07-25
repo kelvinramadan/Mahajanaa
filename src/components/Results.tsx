@@ -24,6 +24,7 @@ interface ResultsProps {
 export function Results({ commodities, weights, results, budget, onCalculate, isCalculating }: ResultsProps) {
   const { toast } = useToast();
   const [exportFormat, setExportFormat] = useState<'pdf' | 'excel'>('pdf');
+  const [showCalculationSteps, setShowCalculationSteps] = useState(false);
 
   const handleExport = async (format: 'pdf' | 'excel') => {
     if (!results) return;
@@ -451,29 +452,11 @@ export function Results({ commodities, weights, results, budget, onCalculate, is
           <div className="space-y-4">
             <Target className="w-16 h-16 text-primary mx-auto" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">Siap untuk Perhitungan</h3>
+              <h3 className="text-lg font-semibold mb-2">Menunggu Perhitungan</h3>
               <p className="text-muted-foreground mb-4">
-                {commodities.length} komoditas telah diinput. Klik tombol di bawah untuk menjalankan analisis SPK.
+                {commodities.length} komoditas telah diinput. Gunakan tombol "Hitung SPK" di bagian bawah halaman untuk menjalankan analisis.
               </p>
             </div>
-            <Button 
-              onClick={onCalculate}
-              disabled={isCalculating || commodities.length < 2}
-              className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-              size="lg"
-            >
-              {isCalculating ? (
-                <>
-                  <Calculator className="w-4 h-4 mr-2 animate-spin" />
-                  Menghitung SPK...
-                </>
-              ) : (
-                <>
-                  <Calculator className="w-4 h-4 mr-2" />
-                  Mulai Perhitungan
-                </>
-              )}
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -767,22 +750,38 @@ export function Results({ commodities, weights, results, budget, onCalculate, is
 
       {/* Results Comparison */}
       <Tabs defaultValue="comparison" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="comparison">Perbandingan</TabsTrigger>
-          <TabsTrigger value="saw">Hasil SAW</TabsTrigger>
-          <TabsTrigger value="topsis">Hasil TOPSIS</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="comparison" className="text-xs sm:text-sm px-2 py-2">
+            <span className="hidden sm:inline">Perbandingan</span>
+            <span className="sm:hidden">Compare</span>
+          </TabsTrigger>
+          <TabsTrigger value="saw" className="text-xs sm:text-sm px-2 py-2">SAW</TabsTrigger>
+          <TabsTrigger value="topsis" className="text-xs sm:text-sm px-2 py-2">TOPSIS</TabsTrigger>
         </TabsList>
 
         <TabsContent value="comparison" className="space-y-4">
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-primary" />
-                Perbandingan Hasil SAW vs TOPSIS
-              </CardTitle>
-              <CardDescription>
-                Tabel perbandingan peringkat dari kedua metode
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    Perbandingan Hasil SAW vs TOPSIS
+                  </CardTitle>
+                  <CardDescription>
+                    Tabel perbandingan peringkat dari kedua metode
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowCalculationSteps(!showCalculationSteps)}
+                  className="flex items-center gap-2"
+                >
+                  <Calculator className="w-4 h-4" />
+                  {showCalculationSteps ? 'Sembunyikan' : 'Tampilkan'} Proses Perhitungan
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -846,6 +845,205 @@ export function Results({ commodities, weights, results, budget, onCalculate, is
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Calculation Steps Display */}
+              {showCalculationSteps && (
+                <div className="mt-6 space-y-6">
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Calculator className="w-5 h-5 text-primary" />
+                      Langkah-langkah Perhitungan
+                    </h3>
+                    
+                    <Tabs defaultValue="saw-steps" className="space-y-4">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="saw-steps">Proses SAW</TabsTrigger>
+                        <TabsTrigger value="topsis-steps">Proses TOPSIS</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="saw-steps" className="space-y-4">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-base">Metode SAW (Simple Additive Weighting)</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="p-4 bg-muted rounded-lg">
+                              <h4 className="font-semibold mb-2">Langkah 1: Normalisasi Matriks</h4>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                Untuk kriteria benefit: R[i,j] = X[i,j] / Max(X[i,j])<br/>
+                                Untuk kriteria cost: R[i,j] = Min(X[i,j]) / X[i,j]
+                              </p>
+                              <div className="overflow-x-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Komoditas</TableHead>
+                                      <TableHead>Luas Lahan</TableHead>
+                                      <TableHead>Produktivitas</TableHead>
+                                      <TableHead>Harga Jual</TableHead>
+                                      <TableHead>Tenaga Kerja</TableHead>
+                                      <TableHead>Permintaan Pasar</TableHead>
+                                      <TableHead>Potensi Turunan</TableHead>
+                                      <TableHead>Biaya Produksi</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {commodities.map((commodity) => (
+                                      <TableRow key={commodity.id}>
+                                        <TableCell className="font-medium">{commodity.name}</TableCell>
+                                        <TableCell>{(commodity.landArea / Math.max(...commodities.map(c => c.landArea))).toFixed(3)}</TableCell>
+                                        <TableCell>{(commodity.productivity / Math.max(...commodities.map(c => c.productivity))).toFixed(3)}</TableCell>
+                                        <TableCell>{(commodity.sellingPrice / Math.max(...commodities.map(c => c.sellingPrice))).toFixed(3)}</TableCell>
+                                        <TableCell>{(commodity.laborAvailability / Math.max(...commodities.map(c => c.laborAvailability))).toFixed(3)}</TableCell>
+                                        <TableCell>{(commodity.marketDemand / Math.max(...commodities.map(c => c.marketDemand))).toFixed(3)}</TableCell>
+                                        <TableCell>{(commodity.derivativesPotential / Math.max(...commodities.map(c => c.derivativesPotential))).toFixed(3)}</TableCell>
+                                        <TableCell>{(Math.min(...commodities.map(c => c.productionCost)) / commodity.productionCost).toFixed(3)}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                            
+                            <div className="p-4 bg-muted rounded-lg">
+                              <h4 className="font-semibold mb-2">Langkah 2: Perhitungan Skor Akhir</h4>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                S[i] = Σ(W[j] × R[i,j])
+                              </p>
+                              <div className="space-y-2">
+                                {results.saw.alternatives.map((alternative) => {
+                                  const commodity = commodities.find(c => c.id === alternative.id);
+                                  if (!commodity) return null;
+                                  
+                                  const normalizedValues = [
+                                    commodity.landArea / Math.max(...commodities.map(c => c.landArea)),
+                                    commodity.productivity / Math.max(...commodities.map(c => c.productivity)),
+                                    commodity.sellingPrice / Math.max(...commodities.map(c => c.sellingPrice)),
+                                    commodity.laborAvailability / Math.max(...commodities.map(c => c.laborAvailability)),
+                                    commodity.marketDemand / Math.max(...commodities.map(c => c.marketDemand)),
+                                    commodity.derivativesPotential / Math.max(...commodities.map(c => c.derivativesPotential)),
+                                    Math.min(...commodities.map(c => c.productionCost)) / commodity.productionCost
+                                  ];
+                                  
+                                  const weightValues = [
+                                    weights.landArea,
+                                    weights.productivity,
+                                    weights.sellingPrice,
+                                    weights.laborAvailability,
+                                    weights.marketDemand,
+                                    weights.derivativesPotential,
+                                    weights.productionCost
+                                  ];
+                                  
+                                  return (
+                                    <div key={alternative.id} className="p-3 bg-background rounded border">
+                                      <div className="font-medium mb-1">{commodity.name}:</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        S = ({weightValues[0]} × {normalizedValues[0].toFixed(3)}) + 
+                                        ({weightValues[1]} × {normalizedValues[1].toFixed(3)}) + 
+                                        ({weightValues[2]} × {normalizedValues[2].toFixed(3)}) + 
+                                        ({weightValues[3]} × {normalizedValues[3].toFixed(3)}) + 
+                                        ({weightValues[4]} × {normalizedValues[4].toFixed(3)}) + 
+                                        ({weightValues[5]} × {normalizedValues[5].toFixed(3)}) + 
+                                        ({weightValues[6]} × {normalizedValues[6].toFixed(3)}) = 
+                                        <span className="font-semibold text-primary"> {alternative.score.toFixed(3)}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
+                      
+                      <TabsContent value="topsis-steps" className="space-y-4">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-base">Metode TOPSIS</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="p-4 bg-muted rounded-lg">
+                              <h4 className="font-semibold mb-2">Langkah 1: Normalisasi Matriks</h4>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                R[i,j] = X[i,j] / √(Σ(X[i,j]²))
+                              </p>
+                              <div className="overflow-x-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Komoditas</TableHead>
+                                      <TableHead>Luas Lahan</TableHead>
+                                      <TableHead>Produktivitas</TableHead>
+                                      <TableHead>Harga Jual</TableHead>
+                                      <TableHead>Tenaga Kerja</TableHead>
+                                      <TableHead>Permintaan Pasar</TableHead>
+                                      <TableHead>Potensi Turunan</TableHead>
+                                      <TableHead>Biaya Produksi</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {commodities.map((commodity) => {
+                                      // Calculate TOPSIS normalization
+                                      const sqrtSums = [
+                                        Math.sqrt(commodities.reduce((sum, c) => sum + c.landArea * c.landArea, 0)),
+                                        Math.sqrt(commodities.reduce((sum, c) => sum + c.productivity * c.productivity, 0)),
+                                        Math.sqrt(commodities.reduce((sum, c) => sum + c.sellingPrice * c.sellingPrice, 0)),
+                                        Math.sqrt(commodities.reduce((sum, c) => sum + c.laborAvailability * c.laborAvailability, 0)),
+                                        Math.sqrt(commodities.reduce((sum, c) => sum + c.marketDemand * c.marketDemand, 0)),
+                                        Math.sqrt(commodities.reduce((sum, c) => sum + c.derivativesPotential * c.derivativesPotential, 0)),
+                                        Math.sqrt(commodities.reduce((sum, c) => sum + c.productionCost * c.productionCost, 0))
+                                      ];
+                                      
+                                      return (
+                                        <TableRow key={commodity.id}>
+                                          <TableCell className="font-medium">{commodity.name}</TableCell>
+                                          <TableCell>{(commodity.landArea / sqrtSums[0]).toFixed(3)}</TableCell>
+                                          <TableCell>{(commodity.productivity / sqrtSums[1]).toFixed(3)}</TableCell>
+                                          <TableCell>{(commodity.sellingPrice / sqrtSums[2]).toFixed(3)}</TableCell>
+                                          <TableCell>{(commodity.laborAvailability / sqrtSums[3]).toFixed(3)}</TableCell>
+                                          <TableCell>{(commodity.marketDemand / sqrtSums[4]).toFixed(3)}</TableCell>
+                                          <TableCell>{(commodity.derivativesPotential / sqrtSums[5]).toFixed(3)}</TableCell>
+                                          <TableCell>{(commodity.productionCost / sqrtSums[6]).toFixed(3)}</TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                            
+                            <div className="p-4 bg-muted rounded-lg">
+                              <h4 className="font-semibold mb-2">Langkah 2: Solusi Ideal Positif dan Negatif</h4>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                A+ = nilai maksimal untuk benefit, minimal untuk cost<br/>
+                                A- = nilai minimal untuk benefit, maksimal untuk cost
+                              </p>
+                            </div>
+                            
+                            <div className="p-4 bg-muted rounded-lg">
+                              <h4 className="font-semibold mb-2">Langkah 3: Perhitungan Kedekatan Relatif</h4>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                C[i] = D[i-] / (D[i+] + D[i-])
+                              </p>
+                              <div className="space-y-2">
+                                {results.topsis.alternatives.map((alternative) => (
+                                  <div key={alternative.id} className="p-3 bg-background rounded border">
+                                    <div className="font-medium mb-1">{alternative.name}:</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      Skor TOPSIS = <span className="font-semibold text-primary">{alternative.score.toFixed(3)}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -959,10 +1157,10 @@ export function Results({ commodities, weights, results, budget, onCalculate, is
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Button
               onClick={() => handleExport('pdf')}
-              className="bg-gradient-primary"
+              className="bg-gradient-primary w-full sm:w-auto"
             >
               <FileText className="w-4 h-4 mr-2" />
               Export PDF
@@ -970,6 +1168,7 @@ export function Results({ commodities, weights, results, budget, onCalculate, is
             <Button
               onClick={() => handleExport('excel')}
               variant="outline"
+              className="w-full sm:w-auto"
             >
               <TrendingUp className="w-4 h-4 mr-2" />
               Export Excel
